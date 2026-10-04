@@ -1,450 +1,691 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbit Matrix | Decentralized GRAM Matrix</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pop Galaxy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #07090e;
-            --card-bg: #0f131c;
-            --card-border: #1a2233;
-            --accent-purple: #7928ca;
-            --accent-cyan: #00dfd8;
-            --text-main: #f3f4f6;
-            --text-muted: #8e9bb0;
-            --green-node: #10b981;
-            --empty-node: #1e293b;
+            --bg-black: #000000;
+            --card-dark: #0e1015;
+            --blue-accent: #0088CC;
+            --purple-card: #5E35B1;
+            --text-white: #FFFFFF;
+            --text-gray: #8E9297;
+            --border-dark: #1E222B;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
+            background-color: var(--bg-black);
+            color: var(--text-white);
             min-height: 100vh;
-            padding-bottom: 30px;
+            overflow-x: hidden;
+            position: relative;
         }
 
-        .container {
-            max-width: 1200px;
+        .ambient-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 320px;
+            background: radial-gradient(circle at 15% 0%, rgba(0, 136, 204, 0.45) 0%, rgba(10, 20, 40, 0.2) 50%, transparent 80%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            padding: 16px 20px 60px;
+            max-width: 480px;
             margin: 0 auto;
-            padding: 15px;
         }
 
-        .navbar {
+        /* Top Navbar */
+        .nav-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            background-color: var(--card-bg);
-            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 24px;
         }
 
-        .logo {
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .logo-orbit {
-            color: var(--accent-cyan);
-        }
-
-        .header-right {
+        .logo-box {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .user-stats-pill {
-            background: #141a29;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            border: 1px solid var(--card-border);
+        .logo-icon {
+            width: 28px;
+            height: 22px;
+            background: linear-gradient(135deg, #00D2FF, #0088CC);
+            clip-path: polygon(0 35%, 65% 0, 100% 30%, 65% 100%, 30% 75%);
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .menu-bar {
             display: flex;
-            gap: 8px;
-        }
-
-        .user-stats-pill b {
-            color: var(--accent-cyan);
-        }
-
-        .wallet-btn {
-            background: linear-gradient(135deg, var(--accent-purple), #4338ca);
-            color: #fff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 12px;
+            flex-direction: column;
+            gap: 5px;
             cursor: pointer;
         }
 
-        .banner-card {
-            background: linear-gradient(180deg, #131927 0%, var(--card-bg) 100%);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 20px;
-            margin-top: 15px;
+        .menu-bar span {
+            width: 22px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
         }
 
-        .banner-info h2 {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .banner-info p {
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        .banner-info b {
-            color: var(--accent-cyan);
-        }
-
-        .currency-selector {
-            margin-top: 15px;
-        }
-
-        .currency-selector label {
+        /* Hero Pill */
+        .badge-pill {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 7px 16px;
+            border-radius: 30px;
+            display: inline-block;
             font-size: 12px;
-            color: var(--text-muted);
-            display: block;
+            color: var(--text-gray);
+            margin-bottom: 20px;
+        }
+
+        /* Hero Headings */
+        .hero-head {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+        }
+
+        .hero-head span {
+            color: #2F80ED;
+        }
+
+        .hero-desc {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-gray);
+            margin-bottom: 25px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .btn-blue {
+            flex: 1;
+            background: #0088CC;
+            color: #fff;
+            padding: 14px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(0, 136, 204, 0.4);
+        }
+
+        .btn-outline {
+            flex: 1;
+            background: #17191E;
+            color: #fff;
+            padding: 14px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid var(--border-dark);
+            cursor: pointer;
+        }
+
+        /* Live Overview Cards */
+        .overview-box {
+            background: #0B0D11;
+            border: 1px solid var(--border-dark);
+            border-radius: 24px;
+            padding: 22px 18px;
+            margin-bottom: 30px;
+        }
+
+        .ob-title {
+            font-size: 19px;
+            font-weight: 700;
             margin-bottom: 6px;
         }
 
-        .toggle-group {
-            display: flex;
-            gap: 6px;
-            background: #090c14;
-            padding: 4px;
-            border-radius: 10px;
-            border: 1px solid var(--card-border);
+        .ob-sub {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 18px;
         }
 
-        .curr-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 8px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            flex: 1;
-            transition: 0.2s;
-        }
-
-        .curr-btn.active {
-            background: var(--accent-purple);
-            color: #fff;
-        }
-
-        .section-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0 15px;
-        }
-
-        .section-title h3 {
-            font-size: 14px;
-        }
-
-        .fee-badge {
-            background: #172033;
-            color: var(--accent-cyan);
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 11px;
-            border: 1px solid rgba(0, 223, 216, 0.2);
-        }
-
-        .slots-grid {
+        .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
 
-        @media (min-width: 768px) {
-            .slots-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
+        .metric-card {
+            background: #12141A;
+            border-radius: 16px;
+            padding: 16px 14px;
         }
 
-        .slot-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
+        .m-label {
+            font-size: 11px;
+            color: var(--text-gray);
+            margin-bottom: 6px;
+        }
+
+        .m-val {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .m-tag {
+            font-size: 11px;
+            color: #2F80ED;
+        }
+
+        /* Single Program: Nova (Base Replacement) */
+        .program-card {
+            background: linear-gradient(180deg, #5E35B1 0%, #4527A0 100%);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .pc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .pc-title {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .pc-badge {
+            background: #000;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .pc-desc {
+            font-size: 13px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 20px;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .feat-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 14px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .pc-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-explore {
+            background: #7E57C2;
+            color: #fff;
+            border: none;
             padding: 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn-levels {
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* View State 2: One More Step / Join Screen */
+        .step-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
             text-align: center;
         }
 
-        .slot-tier {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
+        .step-logo {
+            width: 50px;
+            height: 40px;
+            background: linear-gradient(135deg, #00D2FF, #0088CC);
+            clip-path: polygon(0 35%, 65% 0, 100% 30%, 65% 100%, 30% 75%);
+            margin-bottom: 24px;
         }
 
-        .slot-cost {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--accent-cyan);
-            margin: 8px 0;
+        .step-heading {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 30px;
         }
 
-        .matrix-nodes {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin: 10px 0;
-        }
-
-        .node {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background-color: var(--empty-node);
-            border: 1px solid #334155;
-        }
-
-        .node.filled {
-            background-color: var(--green-node);
-            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
-        }
-
-        .recycle-text {
-            font-size: 10px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-        }
-
-        .buy-slot-btn {
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: none;
-            background: #192236;
-            color: #fff;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .buy-slot-btn:hover {
-            background: var(--accent-purple);
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            z-index: 999;
-        }
-
-        .modal-box {
-            background: #0f1422;
-            border: 1px solid var(--card-border);
-            padding: 20px;
-            border-radius: 14px;
+        .btn-join {
             width: 100%;
             max-width: 320px;
+            background: #0088CC;
+            color: #fff;
+            padding: 15px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 136, 204, 0.4);
+            margin-bottom: 16px;
         }
 
-        .modal-box h4 {
-            margin-bottom: 12px;
-            color: var(--text-main);
-            font-size: 15px;
+        .inviter-label {
+            font-size: 13px;
+            color: #2F80ED;
+            margin-bottom: 6px;
         }
 
-        .modal-details p {
+        .change-inviter {
             font-size: 12px;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
+            color: var(--text-gray);
+            cursor: pointer;
+            margin-bottom: 50px;
+        }
+
+        .wallet-connected-info {
+            font-size: 12px;
+            color: var(--text-gray);
             margin-bottom: 8px;
         }
 
-        .modal-details span {
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .modal-details hr {
-            border: 0;
-            border-top: 1px solid var(--card-border);
-            margin: 10px 0;
-        }
-
-        .total-text span {
-            color: var(--accent-cyan) !important;
-            font-size: 15px;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .btn-cancel, .btn-confirm {
-            flex: 1;
-            padding: 8px;
-            border-radius: 6px;
+        .btn-disconnect {
+            background: none;
             border: none;
+            color: #2F80ED;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            font-size: 12px;
         }
 
-        .btn-cancel {
-            background: #20293a;
+        /* Bottom Sheet: Transaction Preview */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            justify-content: flex-end;
+            flex-direction: column;
+        }
+
+        .sheet-content {
+            background: #111317;
+            border-top: 1px solid var(--border-dark);
+            border-radius: 26px 26px 0 0;
+            padding: 24px 20px 30px;
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .sheet-title {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .sheet-close {
+            background: none;
+            border: none;
+            color: var(--text-gray);
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        /* Token Toggle Tabs */
+        .token-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .t-tab {
+            background: #171A21;
+            border: 1px solid var(--border-dark);
+            border-radius: 12px;
+            padding: 10px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--text-gray);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .t-tab.active {
+            background: #0088CC;
+            border-color: #0088CC;
             color: #fff;
         }
 
-        .btn-confirm {
-            background: var(--accent-cyan);
-            color: #07090e;
+        .invoice-table {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 22px;
+            font-size: 13px;
+        }
+
+        .inv-item {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-gray);
+        }
+
+        .inv-item span:last-child {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .inv-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-dark);
+            margin-bottom: 24px;
+        }
+
+        .inv-total .label {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .inv-total .value {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0088CC;
+        }
+
+        .btn-confirm-action {
+            width: 100%;
+            background: #0088CC;
+            color: #fff;
+            padding: 15px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <header class="navbar">
-        <div class="logo"><span class="logo-orbit">ORBIT</span> MATRIX</div>
-        <div class="header-right">
-            <div class="user-stats-pill">
-                <span>Profit: <b>128.5 GRAM</b></span>
-            </div>
-            <button class="wallet-btn" id="connect-wallet">Connect</button>
-        </div>
-    </header>
 
-    <main class="container">
-        <section class="banner-card">
-            <div class="banner-info">
-                <h2>100% RECYCLE MATRIX</h2>
-                <p>সব লেনদেন ও আয় <b>GRAM</b> নেটওয়ার্কে জমা হয়।</p>
+    <div class="ambient-glow"></div>
+
+    <div class="wrapper">
+        <!-- Top Nav -->
+        <div class="nav-bar">
+            <div class="logo-box">
+                <div class="logo-icon"></div>
+                <div class="logo-title">Pop Galaxy</div>
             </div>
-            <div class="currency-selector">
-                <label>পেমেন্ট মেথড সিলেক্ট করুন:</label>
-                <div class="toggle-group">
-                    <button class="curr-btn active" data-currency="POP">POP (0.8 GRAM Fee)</button>
-                    <button class="curr-btn" data-currency="GRAM">GRAM (1.0 Fee)</button>
-                    <button class="curr-btn" data-currency="USDT">USDT (1.0 Fee)</button>
+            <div class="menu-bar">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- 1. Landing View Mode -->
+        <div id="landing-view">
+            <div class="badge-pill">Pop Galaxy ecosystem · live on-chain products</div>
+
+            <h1 class="hero-head">
+                Build your position.<br>
+                <span>Grow your team.</span><br>
+                Unlock more ways to earn.
+            </h1>
+
+            <p class="hero-desc">
+                Pop Galaxy combines Nova Matrix structure and instant reward distribution directly in GRAM. Activate levels, invite partners, and track earnings on-chain.
+            </p>
+
+            <div class="hero-btns">
+                <button class="btn-blue" onclick="simulateWalletConnect()">Connect Wallet</button>
+                <button class="btn-outline" onclick="scrollToProgram()">See how it works</button>
+            </div>
+
+            <div class="overview-box">
+                <div class="ob-title">Pop Galaxy is already live</div>
+                <div class="ob-sub">Current ecosystem indicators shown on the existing Pop Galaxy overview.</div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="m-label">Project participants</div>
+                        <div class="m-val">194,926</div>
+                        <div class="m-tag">live ecosystem</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="m-label">GRAM in project</div>
+                        <div class="m-val">7.43M+</div>
+                        <div class="m-tag">on-platform volume</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="m-label">POP in project</div>
+                        <div class="m-val">45,128</div>
+                        <div class="m-tag">ecosystem token</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="m-label">Audited</div>
+                        <div class="m-val">Yes</div>
+                        <div class="m-tag">Tact Smart Contract</div>
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <div class="section-title">
-            <h3>SLOTS (10 TIERS)</h3>
-            <span class="fee-badge" id="fee-display">ফি: 0.8 GRAM</span>
+            <!-- Single Program: Nova -->
+            <div class="program-card" id="program-nova">
+                <div class="pc-top">
+                    <div class="pc-title">Nova</div>
+                    <div class="pc-badge">Start with GRAM</div>
+                </div>
+                <p class="pc-desc">
+                    A simpler entry into Pop Galaxy. Activate levels with GRAM, grow your matrix and build a partner structure inside the Nova program.
+                </p>
+                <div class="feature-list">
+                    <div class="feat-item">1x3 Dynamic Matrix Structure</div>
+                    <div class="feat-item">10 Progressive Levels</div>
+                    <div class="feat-item">Automatic Recycle / Reinvest Mechanics</div>
+                    <div class="feat-item">Developer Fee: 0.8 - 1.0 GRAM</div>
+                </div>
+                <div class="pc-actions">
+                    <button class="btn-explore" onclick="simulateWalletConnect()">Explore Nova</button>
+                    <button class="btn-levels" onclick="simulateWalletConnect()">See levels</button>
+                </div>
+            </div>
         </div>
 
-        <div class="slots-grid" id="slots-container"></div>
-    </main>
+        <!-- 2. Step View (After Wallet Connection) -->
+        <div id="step-view" class="step-container">
+            <div class="step-logo"></div>
+            <div class="step-heading">One more step</div>
 
-    <div class="modal-overlay" id="purchase-modal">
-        <div class="modal-box">
-            <h4>স্লট কনফার্মেশন</h4>
-            <div class="modal-details">
-                <p>স্লট নম্বর: <span id="modal-slot-id">#1</span></p>
-                <p>মূল্য: <span id="modal-slot-price">2 GRAM</span></p>
-                <p>মেথড: <span id="modal-currency">POP</span></p>
-                <p>ডেভ ফি: <span id="modal-dev-fee">0.8 GRAM</span></p>
-                <hr>
-                <p class="total-text">মোট: <span id="modal-total-amount">2.8 GRAM</span></p>
+            <button class="btn-join" onclick="openBottomSheet()">Join</button>
+            <div class="inviter-label" id="inviter-text">You were invited by Direct (Admin)</div>
+            <div class="change-inviter" onclick="promptChangeInviter()">Change inviter</div>
+
+            <div class="wallet-connected-info">
+                Connected wallet: <span id="wallet-short">UQDE5S...feZQ</span>
             </div>
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeModal()">বাতিল</button>
-                <button class="btn-confirm" onclick="confirmPurchase()">কিনুন</button>
+            <button class="btn-disconnect" onclick="disconnectWallet()">Disconnect</button>
+        </div>
+    </div>
+
+    <!-- 3. Transaction Preview Bottom Sheet -->
+    <div class="sheet-overlay" id="tx-sheet">
+        <div class="sheet-content">
+            <div class="sheet-header">
+                <div class="sheet-title">Transaction Preview</div>
+                <button class="sheet-close" onclick="closeBottomSheet()">&times;</button>
             </div>
+
+            <div class="token-tabs">
+                <div class="t-tab active" data-cur="POP">● POP</div>
+                <div class="t-tab" data-cur="GRAM">◆ GRAM</div>
+                <div class="t-tab" data-cur="USDT">₮ USDT</div>
+            </div>
+
+            <div class="invoice-table">
+                <div class="inv-item">
+                    <span>Network</span>
+                    <span>The Open Network</span>
+                </div>
+                <div class="inv-item">
+                    <span>Join price</span>
+                    <span id="invoice-slot-price">2 GRAM</span>
+                </div>
+                <div class="inv-item">
+                    <span>Service Fee</span>
+                    <span id="invoice-dev-fee">0.8 GRAM</span>
+                </div>
+                <div class="inv-item">
+                    <span>Dev Wallet</span>
+                    <span>UQDE5S...feZQ</span>
+                </div>
+            </div>
+
+            <div class="inv-total">
+                <span class="label">Total</span>
+                <span class="value" id="invoice-total">2.8 GRAM</span>
+            </div>
+
+            <button class="btn-confirm-action" onclick="finishJoin()">Confirm Transaction</button>
         </div>
     </div>
 
     <script>
-        const slotTiers = [
-            { id: 1, gramPrice: 2 },
-            { id: 2, gramPrice: 4 },
-            { id: 3, gramPrice: 8 },
-            { id: 4, gramPrice: 16 },
-            { id: 5, gramPrice: 32 },
-            { id: 6, gramPrice: 64 },
-            { id: 7, gramPrice: 128 },
-            { id: 8, gramPrice: 250 },
-            { id: 9, gramPrice: 500 },
-            { id: 10, gramPrice: 1000 }
-        ];
+        // Check Referrer on Load
+        let inviter = "Direct (Admin)";
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get('ref') || urlParams.get('tgWebAppStartParam');
+        if (refParam) {
+            inviter = "@" + refParam;
+        }
+        document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
 
-        let selectedCurrency = "POP";
-        let currentDevFee = 0.8;
-        let currentSelectedSlot = null;
+        let activeToken = "POP";
+        let baseJoinPrice = 2; // Tier 1: 2 GRAM
+        let devFee = 0.8;      // Default for POP
 
-        function renderSlots() {
-            const container = document.getElementById("slots-container");
-            container.innerHTML = "";
-            slotTiers.forEach(slot => {
-                const card = document.createElement("div");
-                card.className = "slot-card";
-                card.innerHTML = `
-                    <div class="slot-tier">SLOT #${slot.id}</div>
-                    <div class="slot-cost">${slot.gramPrice} GRAM</div>
-                    <div class="matrix-nodes">
-                        <div class="node filled"></div>
-                        <div class="node"></div>
-                        <div class="node"></div>
-                    </div>
-                    <div class="recycle-text">Cycles: 0 | 1/3</div>
-                    <button class="buy-slot-btn" onclick="openPurchaseModal(${slot.id}, ${slot.gramPrice})">অ্যাক্টিভেট</button>
-                `;
-                container.appendChild(card);
-            });
+        function simulateWalletConnect() {
+            document.getElementById("landing-view").style.display = "none";
+            document.getElementById("step-view").style.display = "flex";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        document.querySelectorAll(".curr-btn").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                document.querySelectorAll(".curr-btn").forEach(b => b.classList.remove("active"));
-                e.target.classList.add("active");
-                selectedCurrency = e.target.getAttribute("data-currency");
-                currentDevFee = selectedCurrency === "POP" ? 0.8 : 1.0;
-                document.getElementById("fee-display").innerText = `ফি: ${currentDevFee.toFixed(1)} GRAM`;
+        function disconnectWallet() {
+            document.getElementById("step-view").style.display = "none";
+            document.getElementById("landing-view").style.display = "block";
+        }
+
+        function scrollToProgram() {
+            document.getElementById("program-nova").scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function promptChangeInviter() {
+            const newRef = prompt("Enter inviter username or ID:", "");
+            if (newRef) {
+                inviter = "@" + newRef.replace("@", "");
+                document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
+            }
+        }
+
+        function openBottomSheet() {
+            updateInvoice();
+            document.getElementById("tx-sheet").style.display = "flex";
+        }
+
+        function closeBottomSheet() {
+            document.getElementById("tx-sheet").style.display = "none";
+        }
+
+        function updateInvoice() {
+            devFee = (activeToken === "POP") ? 0.8 : 1.0;
+            document.getElementById("invoice-slot-price").innerText = `${baseJoinPrice} GRAM`;
+            document.getElementById("invoice-dev-fee").innerText = `${devFee.toFixed(1)} GRAM`;
+            document.getElementById("invoice-total").innerText = `${(baseJoinPrice + devFee).toFixed(1)} GRAM`;
+        }
+
+        document.querySelectorAll(".t-tab").forEach(tab => {
+            tab.addEventListener("click", (e) => {
+                document.querySelectorAll(".t-tab").forEach(t => t.classList.remove("active"));
+                e.currentTarget.classList.add("active");
+                activeToken = e.currentTarget.getAttribute("data-cur");
+                updateInvoice();
             });
         });
 
-        function openPurchaseModal(slotId, gramPrice) {
-            currentSelectedSlot = { id: slotId, price: gramPrice };
-            document.getElementById("modal-slot-id").innerText = `#${slotId}`;
-            document.getElementById("modal-slot-price").innerText = `${gramPrice} GRAM`;
-            document.getElementById("modal-currency").innerText = selectedCurrency;
-            document.getElementById("modal-dev-fee").innerText = `${currentDevFee} GRAM`;
-            document.getElementById("modal-total-amount").innerText = `${(gramPrice + currentDevFee).toFixed(1)} GRAM`;
-            document.getElementById("purchase-modal").style.display = "flex";
+        function finishJoin() {
+            alert(`Level 1 Activated successfully via ${activeToken}!\nDeveloper Fee (${devFee} GRAM) routed to Dev Wallet: UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ`);
+            closeBottomSheet();
         }
-
-        function closeModal() {
-            document.getElementById("purchase-modal").style.display = "none";
-        }
-
-        function confirmPurchase() {
-            alert(`স্লট #${currentSelectedSlot.id} কেনার রিকোয়েস্ট সফল! ফি (${currentDevFee} GRAM) ডেভ ওয়ালেটে পাঠানো হচ্ছে।`);
-            closeModal();
-        }
-
-        renderSlots();
     </script>
 </body>
-</html>
+    </html>
