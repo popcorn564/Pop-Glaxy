@@ -6,6 +6,7 @@
     <title>Pop Galaxy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://unpkg.com/tonweb@0.0.66/dist/tonweb.js"></script>
     <style>
         :root {
             --bg-black: #000000;
@@ -591,17 +592,17 @@
                 </div>
                 <div class="inv-item">
                     <span>Join price</span>
-                    <span id="invoice-slot-price">1 GRAM</span>
+                    <span id="invoice-slot-price">--</span>
                 </div>
                 <div class="inv-item">
                     <span>Transaction Fee</span>
-                    <span id="invoice-fee">0.6 GRAM</span>
+                    <span id="invoice-fee">--</span>
                 </div>
             </div>
 
             <div class="inv-total">
                 <span class="label">Total</span>
-                <span class="value" id="invoice-total">1.6 GRAM</span>
+                <span class="value" id="invoice-total">--</span>
             </div>
 
             <button class="btn-confirm-action" id="btn-pay" onclick="sendTransactionToWallet()">Confirm Transaction</button>
@@ -609,8 +610,11 @@
     </div>
 
     <script>
-        // Admin Receiver Address (Background only, user cannot see this)
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
+        const POP_MASTER_ADDRESS = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
+        const USDT_MASTER_ADDRESS = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
+
+        const tonWeb = new TonWeb();
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
@@ -646,12 +650,10 @@
         }
         document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
 
-        // Pricing Configuration
-        let activeToken = "POP";      // Default token POP
-        let liveGramUsdt = 1.52;      // Default fallback GRAM price in USDT
-        const POP_PRICE_USD = 0.001;  // 1 POP = 0.001 USDT
+        let activeToken = "POP";
+        let liveGramUsdt = 1.52;
+        const POP_PRICE_USD = 0.001;
 
-        // Fetch Live GRAM/USD Price from DEX
         async function fetchLivePrice() {
             try {
                 const res = await fetch("https://api.geckoterminal.com/api/v2/simple/networks/ton/token_price/EQC47093oX5Xhb0xuk2lCr2HSfrKTngMdgQ1cxMNyOtHzPW5");
@@ -690,7 +692,9 @@
             document.getElementById("tx-sheet").style.display = "none";
         }
 
-        // Live calculation and UI update
+        let currentTotalPop = 2736;
+        let currentTotalUsdt = 3.04;
+
         function updateInvoice() {
             const priceLabel = document.getElementById("invoice-slot-price");
             const feeLabel = document.getElementById("invoice-fee");
@@ -699,32 +703,28 @@
             if (!priceLabel || !feeLabel || !totalLabel) return;
 
             if (activeToken === "POP") {
-                // 1.0 GRAM Slot -> Live USDT -> POP (0.001 USD per POP)
                 const slotUsdt = 1.0 * liveGramUsdt;
                 const slotPop = Math.round(slotUsdt / POP_PRICE_USD);
 
-                // 0.8 GRAM Fee -> Live USDT -> POP
                 const feeUsdt = 0.8 * liveGramUsdt;
                 const feePop = Math.round(feeUsdt / POP_PRICE_USD);
 
-                const totalPop = slotPop + feePop;
+                currentTotalPop = slotPop + feePop;
 
                 priceLabel.innerText = `${slotPop.toLocaleString()} POP`;
                 feeLabel.innerText = `${feePop.toLocaleString()} POP`;
-                totalLabel.innerText = `${totalPop.toLocaleString()} POP`;
+                totalLabel.innerText = `${currentTotalPop.toLocaleString()} POP`;
 
             } else if (activeToken === "USDT") {
-                // 1.0 GRAM Slot + 1.0 GRAM Fee = 2.0 GRAM in USDT
                 const slotUsdt = 1.0 * liveGramUsdt;
                 const feeUsdt = 1.0 * liveGramUsdt;
-                const totalUsdt = slotUsdt + feeUsdt;
+                currentTotalUsdt = slotUsdt + feeUsdt;
 
                 priceLabel.innerText = `${slotUsdt.toFixed(2)} USDT`;
                 feeLabel.innerText = `${feeUsdt.toFixed(2)} USDT`;
-                totalLabel.innerText = `${totalUsdt.toFixed(2)} USDT`;
+                totalLabel.innerText = `${currentTotalUsdt.toFixed(2)} USDT`;
 
             } else {
-                // GRAM Method
                 priceLabel.innerText = `1 GRAM`;
                 feeLabel.innerText = `1.0 GRAM`;
                 totalLabel.innerText = `2.0 GRAM`;
@@ -740,7 +740,19 @@
             });
         });
 
-        // Real Ton Transaction Trigger
+        function createJettonTransferPayload(toAddress, tokenAmount, responseAddress) {
+            const cell = new TonWeb.boc.Cell();
+            cell.bits.writeUint(0x0f8a7ea5, 32);
+            cell.bits.writeUint(0, 64);
+            cell.bits.writeCoins(tokenAmount);
+            cell.bits.writeAddress(new TonWeb.utils.Address(toAddress));
+            cell.bits.writeAddress(new TonWeb.utils.Address(responseAddress));
+            cell.bits.writeBit(0);
+            cell.bits.writeCoins(new TonWeb.utils.toNano('0.01'));
+            cell.bits.writeBit(0);
+            return TonWeb.utils.bytesToBase64(cell.toBoc());
+        }
+
         async function sendTransactionToWallet() {
             const payBtn = document.getElementById("btn-pay");
             if (!tonConnectUI.connected) {
@@ -752,21 +764,66 @@
                 payBtn.innerText = "Please confirm in wallet...";
                 payBtn.disabled = true;
 
-                // Fee Amount calculation in GRAM native units (nanoGRAM)
-                let gramFeeAmount = (activeToken === "POP") ? 0.8 : 2.0;
-                const nanoAmount = (BigInt(Math.round(gramFeeAmount * 100)) * 10000000n).toString();
+                const userRawAddress = tonConnectUI.wallet.account.address;
+                let txMessages = [];
+
+                if (activeToken === "GRAM") {
+                    const nanoAmount = new TonWeb.utils.toNano("2.0").toString();
+                    txMessages.push({
+                        address: ADMIN_ADDRESS,
+                        amount: nanoAmount
+                    });
+
+                } else if (activeToken === "USDT") {
+                    const usdtDecimals = 1000000n;
+                    const usdtUnits = BigInt(Math.round(currentTotalUsdt * 100)) * (usdtDecimals / 100n);
+                    const payloadBoc = createJettonTransferPayload(ADMIN_ADDRESS, usdtUnits, userRawAddress);
+
+                    let targetAddress = USDT_MASTER_ADDRESS;
+                    try {
+                        const jettonMinter = new TonWeb.token.jetton.JettonMinter(tonWeb.provider, {
+                            address: USDT_MASTER_ADDRESS
+                        });
+                        const jwAddress = await jettonMinter.getJettonWalletAddress(new TonWeb.utils.Address(userRawAddress));
+                        targetAddress = jwAddress.toString(true, true, true);
+                    } catch (e) {
+                        console.log("Using minter address for USDT fallback");
+                    }
+
+                    txMessages.push({
+                        address: targetAddress,
+                        amount: new TonWeb.utils.toNano("0.05").toString(),
+                        payload: payloadBoc
+                    });
+
+                } else if (activeToken === "POP") {
+                    const popDecimals = 1000000000n;
+                    const popUnits = BigInt(currentTotalPop) * popDecimals;
+                    const payloadBoc = createJettonTransferPayload(ADMIN_ADDRESS, popUnits, userRawAddress);
+
+                    let targetAddress = POP_MASTER_ADDRESS;
+                    try {
+                        const jettonMinter = new TonWeb.token.jetton.JettonMinter(tonWeb.provider, {
+                            address: POP_MASTER_ADDRESS
+                        });
+                        const jwAddress = await jettonMinter.getJettonWalletAddress(new TonWeb.utils.Address(userRawAddress));
+                        targetAddress = jwAddress.toString(true, true, true);
+                    } catch (e) {
+                        console.log("Using minter address for POP fallback");
+                    }
+
+                    txMessages.push({
+                        address: targetAddress,
+                        amount: new TonWeb.utils.toNano("0.05").toString(),
+                        payload: payloadBoc
+                    });
+                }
 
                 const transaction = {
                     validUntil: Math.floor(Date.now() / 1000) + 360,
-                    messages: [
-                        {
-                            address: ADMIN_ADDRESS,
-                            amount: nanoAmount // Automatically sends to your Admin address
-                        }
-                    ]
+                    messages: txMessages
                 };
 
-                // Request user confirmation in wallet
                 const result = await tonConnectUI.sendTransaction(transaction);
                 
                 if (result) {
@@ -785,4 +842,4 @@
         }
     </script>
 </body>
-                    </html>
+</html>
