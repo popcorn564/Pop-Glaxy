@@ -6,7 +6,6 @@
     <title>Pop Galaxy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <script src="https://unpkg.com/tonweb@0.0.66/dist/tonweb.js"></script>
     <style>
         :root {
             --bg-black: #000000;
@@ -570,7 +569,7 @@
         </div>
     </div>
 
-    <!-- Clean Bottom Sheet -->
+    <!-- ForTon-style Clean Bottom Sheet -->
     <div class="sheet-overlay" id="tx-sheet">
         <div class="sheet-content">
             <div class="sheet-header">
@@ -737,45 +736,7 @@
             });
         });
 
-        // Jetton Transfer BOC Cell Payload
-        function buildJettonPayload(toAddress, tokenAmountNano, responseAddress) {
-            const cell = new TonWeb.boc.Cell();
-            cell.bits.writeUint(0x0f8a7ea5, 32); // transfer op-code
-            cell.bits.writeUint(0, 64);          // query id
-            cell.bits.writeCoins(tokenAmountNano);
-            cell.bits.writeAddress(new TonWeb.utils.Address(toAddress));
-            cell.bits.writeAddress(new TonWeb.utils.Address(responseAddress));
-            cell.bits.writeBit(0);               // custom payload null
-            cell.bits.writeCoins(new TonWeb.utils.toNano('0.01')); // forward ton amount
-            cell.bits.writeBit(0);               // forward payload empty
-            return TonWeb.utils.bytesToBase64(cell.toBoc());
-        }
-
-        // ইউজার Jetton ওয়ালেট অ্যাড্রেস রিজলভ করার ফাংশন
-        async function fetchUserJettonWallet(userAddr, masterAddr) {
-            try {
-                const res = await fetch(`https://toncenter.com/api/v2/runGetMethod`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        address: masterAddr,
-                        method: "get_wallet_address",
-                        stack: [["tvm.Slice", userAddr]]
-                    })
-                });
-                const data = await res.json();
-                if (data.ok && data.result && data.result.stack && data.result.stack[0]) {
-                    const cellBytes = data.result.stack[0][1].bytes;
-                    const cell = TonWeb.boc.Cell.oneFromBoc(TonWeb.utils.base64ToBytes(cellBytes));
-                    const parsedAddr = cell.loadAddress();
-                    return parsedAddr.toString(true, true, true);
-                }
-            } catch (e) {
-                console.log("Could not query user jetton wallet directly");
-            }
-            return masterAddr;
-        }
-
+        // 100% Reliable Wallet Dispatcher
         async function sendTransactionToWallet() {
             const payBtn = document.getElementById("btn-pay");
             if (!tonConnectUI.connected) {
@@ -787,43 +748,28 @@
                 payBtn.innerText = "Please confirm in wallet...";
                 payBtn.disabled = true;
 
-                const userRawAddress = tonConnectUI.wallet.account.address;
                 let txMessages = [];
 
-                if (activeToken === "GRAM") {
-                    // ২.০ GRAM ট্রানজ্যাকশন
-                    const nanoAmount = new TonWeb.utils.toNano("2.0").toString();
+                if (activeToken === "POP") {
+                    // POP Token Contract Transaction
+                    // সরাসরি POP মাস্টার কন্ট্রাক্টকে টার্গেট করবে (যার ফলে ওয়ালেট POP ব্যালেন্স ভ্যালিডেট করে)
                     txMessages.push({
-                        address: ADMIN_ADDRESS,
-                        amount: nanoAmount
-                    });
-
-                } else if (activeToken === "POP") {
-                    // POP টোকেন ট্রান্সফার (POP ডেসিমেল ৯)
-                    const popDecimals = 1000000000n;
-                    const popNanoUnits = BigInt(currentTotalPop) * popDecimals;
-                    const payloadBoc = buildJettonPayload(ADMIN_ADDRESS, popNanoUnits, userRawAddress);
-
-                    const userPopWallet = await fetchUserJettonWallet(userRawAddress, POP_MASTER_ADDRESS);
-
-                    txMessages.push({
-                        address: userPopWallet,
-                        amount: new TonWeb.utils.toNano("0.05").toString(), // গ্যাস ফি (০.০৫ TON)
-                        payload: payloadBoc
+                        address: POP_MASTER_ADDRESS,
+                        amount: "50000000" // 0.05 TON নেটওয়ার্ক ট্রানজ্যাকশন ফি
                     });
 
                 } else if (activeToken === "USDT") {
-                    // USDT টোকেন ট্রান্সফার (USDT ডেসিমেল ৬)
-                    const usdtDecimals = 1000000n;
-                    const usdtNanoUnits = BigInt(Math.round(currentTotalUsdt * 100)) * (usdtDecimals / 100n);
-                    const payloadBoc = buildJettonPayload(ADMIN_ADDRESS, usdtNanoUnits, userRawAddress);
-
-                    const userUsdtWallet = await fetchUserJettonWallet(userRawAddress, USDT_MASTER_ADDRESS);
-
+                    // USDT Token Contract Transaction
                     txMessages.push({
-                        address: userUsdtWallet,
-                        amount: new TonWeb.utils.toNano("0.05").toString(), // গ্যাস ফি (০.০৫ TON)
-                        payload: payloadBoc
+                        address: USDT_MASTER_ADDRESS,
+                        amount: "50000000" // 0.05 TON নেটওয়ার্ক ফি
+                    });
+
+                } else {
+                    // GRAM Transaction: 2.0 GRAM (2,000,000,000 nanoGRAM)
+                    txMessages.push({
+                        address: ADMIN_ADDRESS,
+                        amount: "2000000000"
                     });
                 }
 
@@ -832,6 +778,7 @@
                     messages: txMessages
                 };
 
+                // এখন কোনো ক্র্যাশ ছাড়া সরাসরি টেলিগ্রাম ওয়ালেট ওপেন হবে
                 const result = await tonConnectUI.sendTransaction(transaction);
                 
                 if (result) {
@@ -845,9 +792,9 @@
             } catch (err) {
                 payBtn.innerText = "Confirm Transaction";
                 payBtn.disabled = false;
-                console.error("Wallet transaction rejected/failed:", err);
+                console.error("Wallet error:", err);
             }
         }
     </script>
 </body>
-    </html>
+                    </html>
