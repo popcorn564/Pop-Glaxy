@@ -14,7 +14,11 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
-
+app.get('/tonconnect-manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.sendFile(path.join(__dirname, 'tonconnect-manifest.json'));
+});
 // Start Server
 app.listen(PORT, () => {
   console.log(`Web server running on port ${PORT}`);
