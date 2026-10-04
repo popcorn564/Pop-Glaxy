@@ -206,7 +206,7 @@
             color: #2F80ED;
         }
 
-        /* Single Program: Nova (Base Replacement) */
+        /* Single Program: Nova */
         .program-card {
             background: linear-gradient(180deg, #5E35B1 0%, #4527A0 100%);
             border-radius: 24px;
@@ -553,7 +553,7 @@
                     <div class="feat-item">1x3 Dynamic Matrix Structure</div>
                     <div class="feat-item">10 Progressive Levels</div>
                     <div class="feat-item">Automatic Recycle / Reinvest Mechanics</div>
-                    <div class="feat-item">Developer Fee: 0.8 - 1.0 GRAM</div>
+                    <div class="feat-item">Developer Fee: 0.6 - 1.0 GRAM</div>
                 </div>
                 <div class="pc-actions">
                     <button class="btn-explore" onclick="simulateWalletConnect()">Explore Nova</button>
@@ -599,11 +599,11 @@
                 </div>
                 <div class="inv-item">
                     <span>Join price</span>
-                    <span id="invoice-slot-price">2 GRAM</span>
+                    <span id="invoice-slot-price">1 GRAM</span>
                 </div>
                 <div class="inv-item">
                     <span>Service Fee</span>
-                    <span id="invoice-dev-fee">0.8 GRAM</span>
+                    <span id="invoice-dev-fee">0.6 GRAM</span>
                 </div>
                 <div class="inv-item">
                     <span>Dev Wallet</span>
@@ -613,7 +613,7 @@
 
             <div class="inv-total">
                 <span class="label">Total</span>
-                <span class="value" id="invoice-total">2.8 GRAM</span>
+                <span class="value" id="invoice-total">1.6 GRAM</span>
             </div>
 
             <button class="btn-confirm-action" onclick="finishJoin()">Confirm Transaction</button>
@@ -631,8 +631,8 @@
         document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
 
         let activeToken = "POP";
-        let baseJoinPrice = 2; // Tier 1: 2 GRAM
-        let devFee = 0.8;      // Default for POP
+        let baseJoinPrice = 1; // Level 1 Join Price: 1 GRAM
+        let devFee = 0.6;      // POP Fee: 0.6 GRAM
 
         function simulateWalletConnect() {
             document.getElementById("landing-view").style.display = "none";
@@ -667,7 +667,7 @@
         }
 
         function updateInvoice() {
-            devFee = (activeToken === "POP") ? 0.8 : 1.0;
+            devFee = (activeToken === "POP") ? 0.6 : 1.0;
             document.getElementById("invoice-slot-price").innerText = `${baseJoinPrice} GRAM`;
             document.getElementById("invoice-dev-fee").innerText = `${devFee.toFixed(1)} GRAM`;
             document.getElementById("invoice-total").innerText = `${(baseJoinPrice + devFee).toFixed(1)} GRAM`;
