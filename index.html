@@ -350,7 +350,6 @@
             cursor: pointer;
         }
 
-        /* Bottom Sheet: ForTon-style Transaction Preview */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -571,7 +570,7 @@
         </div>
     </div>
 
-    <!-- ForTon-style Clean Bottom Sheet -->
+    <!-- Clean Bottom Sheet -->
     <div class="sheet-overlay" id="tx-sheet">
         <div class="sheet-content">
             <div class="sheet-header">
@@ -613,8 +612,6 @@
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
         const POP_MASTER_ADDRESS = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
         const USDT_MASTER_ADDRESS = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
-
-        const tonWeb = new TonWeb();
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
@@ -740,17 +737,43 @@
             });
         });
 
-        function createJettonTransferPayload(toAddress, tokenAmount, responseAddress) {
+        // Jetton Transfer BOC Cell Payload
+        function buildJettonPayload(toAddress, tokenAmountNano, responseAddress) {
             const cell = new TonWeb.boc.Cell();
-            cell.bits.writeUint(0x0f8a7ea5, 32);
-            cell.bits.writeUint(0, 64);
-            cell.bits.writeCoins(tokenAmount);
+            cell.bits.writeUint(0x0f8a7ea5, 32); // transfer op-code
+            cell.bits.writeUint(0, 64);          // query id
+            cell.bits.writeCoins(tokenAmountNano);
             cell.bits.writeAddress(new TonWeb.utils.Address(toAddress));
             cell.bits.writeAddress(new TonWeb.utils.Address(responseAddress));
-            cell.bits.writeBit(0);
-            cell.bits.writeCoins(new TonWeb.utils.toNano('0.01'));
-            cell.bits.writeBit(0);
+            cell.bits.writeBit(0);               // custom payload null
+            cell.bits.writeCoins(new TonWeb.utils.toNano('0.01')); // forward ton amount
+            cell.bits.writeBit(0);               // forward payload empty
             return TonWeb.utils.bytesToBase64(cell.toBoc());
+        }
+
+        // ইউজার Jetton ওয়ালেট অ্যাড্রেস রিজলভ করার ফাংশন
+        async function fetchUserJettonWallet(userAddr, masterAddr) {
+            try {
+                const res = await fetch(`https://toncenter.com/api/v2/runGetMethod`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: masterAddr,
+                        method: "get_wallet_address",
+                        stack: [["tvm.Slice", userAddr]]
+                    })
+                });
+                const data = await res.json();
+                if (data.ok && data.result && data.result.stack && data.result.stack[0]) {
+                    const cellBytes = data.result.stack[0][1].bytes;
+                    const cell = TonWeb.boc.Cell.oneFromBoc(TonWeb.utils.base64ToBytes(cellBytes));
+                    const parsedAddr = cell.loadAddress();
+                    return parsedAddr.toString(true, true, true);
+                }
+            } catch (e) {
+                console.log("Could not query user jetton wallet directly");
+            }
+            return masterAddr;
         }
 
         async function sendTransactionToWallet() {
@@ -768,53 +791,38 @@
                 let txMessages = [];
 
                 if (activeToken === "GRAM") {
+                    // ২.০ GRAM ট্রানজ্যাকশন
                     const nanoAmount = new TonWeb.utils.toNano("2.0").toString();
                     txMessages.push({
                         address: ADMIN_ADDRESS,
                         amount: nanoAmount
                     });
 
-                } else if (activeToken === "USDT") {
-                    const usdtDecimals = 1000000n;
-                    const usdtUnits = BigInt(Math.round(currentTotalUsdt * 100)) * (usdtDecimals / 100n);
-                    const payloadBoc = createJettonTransferPayload(ADMIN_ADDRESS, usdtUnits, userRawAddress);
+                } else if (activeToken === "POP") {
+                    // POP টোকেন ট্রান্সফার (POP ডেসিমেল ৯)
+                    const popDecimals = 1000000000n;
+                    const popNanoUnits = BigInt(currentTotalPop) * popDecimals;
+                    const payloadBoc = buildJettonPayload(ADMIN_ADDRESS, popNanoUnits, userRawAddress);
 
-                    let targetAddress = USDT_MASTER_ADDRESS;
-                    try {
-                        const jettonMinter = new TonWeb.token.jetton.JettonMinter(tonWeb.provider, {
-                            address: USDT_MASTER_ADDRESS
-                        });
-                        const jwAddress = await jettonMinter.getJettonWalletAddress(new TonWeb.utils.Address(userRawAddress));
-                        targetAddress = jwAddress.toString(true, true, true);
-                    } catch (e) {
-                        console.log("Using minter address for USDT fallback");
-                    }
+                    const userPopWallet = await fetchUserJettonWallet(userRawAddress, POP_MASTER_ADDRESS);
 
                     txMessages.push({
-                        address: targetAddress,
-                        amount: new TonWeb.utils.toNano("0.05").toString(),
+                        address: userPopWallet,
+                        amount: new TonWeb.utils.toNano("0.05").toString(), // গ্যাস ফি (০.০৫ TON)
                         payload: payloadBoc
                     });
 
-                } else if (activeToken === "POP") {
-                    const popDecimals = 1000000000n;
-                    const popUnits = BigInt(currentTotalPop) * popDecimals;
-                    const payloadBoc = createJettonTransferPayload(ADMIN_ADDRESS, popUnits, userRawAddress);
+                } else if (activeToken === "USDT") {
+                    // USDT টোকেন ট্রান্সফার (USDT ডেসিমেল ৬)
+                    const usdtDecimals = 1000000n;
+                    const usdtNanoUnits = BigInt(Math.round(currentTotalUsdt * 100)) * (usdtDecimals / 100n);
+                    const payloadBoc = buildJettonPayload(ADMIN_ADDRESS, usdtNanoUnits, userRawAddress);
 
-                    let targetAddress = POP_MASTER_ADDRESS;
-                    try {
-                        const jettonMinter = new TonWeb.token.jetton.JettonMinter(tonWeb.provider, {
-                            address: POP_MASTER_ADDRESS
-                        });
-                        const jwAddress = await jettonMinter.getJettonWalletAddress(new TonWeb.utils.Address(userRawAddress));
-                        targetAddress = jwAddress.toString(true, true, true);
-                    } catch (e) {
-                        console.log("Using minter address for POP fallback");
-                    }
+                    const userUsdtWallet = await fetchUserJettonWallet(userRawAddress, USDT_MASTER_ADDRESS);
 
                     txMessages.push({
-                        address: targetAddress,
-                        amount: new TonWeb.utils.toNano("0.05").toString(),
+                        address: userUsdtWallet,
+                        amount: new TonWeb.utils.toNano("0.05").toString(), // গ্যাস ফি (০.০৫ TON)
                         payload: payloadBoc
                     });
                 }
@@ -842,4 +850,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
