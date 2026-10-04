@@ -349,7 +349,6 @@
             cursor: pointer;
         }
 
-        /* Bottom Sheet */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -611,7 +610,6 @@
         </div>
     </div>
 
-    <!-- Bottom Sheet -->
     <div class="sheet-overlay" id="tx-sheet">
         <div class="sheet-content">
             <div class="sheet-header">
@@ -660,11 +658,6 @@
 
     <script>
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
-        
-        // Exact Contract Addresses
-        const POP_MASTER = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
-        const USDT_MASTER = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
-        const GRAM_MASTER = "EQC47093oX5Xhb0xuk2lCr2HSfrKTngMdgQ1cxMNyOtHzPW5";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
@@ -701,9 +694,7 @@
             tonConnectUI.disconnect();
         }
 
-        // Live Real Jetton Balance Resolver
         async function fetchRealJettonBalances(address) {
-            // First fetch Native Coin (GRAM/TON)
             try {
                 const resNative = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${encodeURIComponent(address)}`);
                 const dataNative = await resNative.json();
@@ -712,7 +703,6 @@
                 }
             } catch (e) {}
 
-            // Fetch Jettons via toncenter v3 without address-format sensitivity
             try {
                 const res = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(address)}&limit=100`);
                 const data = await res.json();
@@ -722,25 +712,17 @@
                         const jMaster = (jw.jetton || "").toLowerCase();
                         const rawBal = parseFloat(jw.balance);
 
-                        // USDT Matching
-                        if (jMaster.includes("eqcxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds") || jMaster.includes("cxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds")) {
-                            userBalances.USDT = rawBal / 1e6; // USDT has 6 decimals
-                        }
-                        // POP Token Matching
-                        else if (jMaster.includes("eqbjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb") || jMaster.includes("bjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb")) {
-                            userBalances.POP = rawBal / 1e9; // POP has 9 decimals
-                        }
-                        // GRAM Jetton Matching (if hold as Jetton)
-                        else if (jMaster.includes("eqc47093ox5xhb0xuk2lcr2hsfrktngmdgq1cxmnyothzpw5")) {
+                        if (jMaster.includes("cxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds")) {
+                            userBalances.USDT = rawBal / 1e6;
+                        } else if (jMaster.includes("bjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb")) {
+                            userBalances.POP = rawBal / 1e9;
+                        } else if (jMaster.includes("c47093ox5xhb0xuk2lcr2hsfrktngmdgq1cxmnyothzpw5")) {
                             userBalances.GRAM = rawBal / 1e9;
                         }
                     });
                 }
-            } catch (err) {
-                console.log("Toncenter v3 fetch bypassed");
-            }
+            } catch (err) {}
 
-            // Backup Fetcher via TonAPI public mirror if USDT or POP still 0
             if (userBalances.USDT === 0 || userBalances.POP === 0) {
                 try {
                     const tonApiRes = await fetch(`https://tonapi.io/v2/accounts/${encodeURIComponent(address)}/jettons`);
@@ -751,9 +733,9 @@
                             const decimals = item.jetton.decimals || 9;
                             const bal = parseFloat(item.balance) / Math.pow(10, decimals);
                             
-                            if (master.includes("eqcxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds") || master.includes("cxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds")) {
+                            if (master.includes("cxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds")) {
                                 userBalances.USDT = bal;
-                            } else if (master.includes("eqbjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb") || master.includes("bjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb")) {
+                            } else if (master.includes("bjr76lkeoc4ma113orjgj5e3g-h8e5lt7ho6vu-ymu2tyb")) {
                                 userBalances.POP = bal;
                             }
                         });
@@ -786,9 +768,7 @@
                         liveGramUsdt = parseFloat(price);
                     }
                 }
-            } catch (err) {
-                console.log("Using baseline GRAM price: 1.52 USDT");
-            }
+            } catch (err) {}
             updateInvoice();
         }
         fetchLivePrice();
@@ -836,13 +816,12 @@
             let userHolding = userBalances[activeToken] || 0;
             let tokenName = activeToken;
 
-            // Update Header Balance Badge for current selected Token
             if (activeToken === "USDT") {
                 balAmountText.innerText = `${userHolding.toFixed(3)} USDT`;
             } else if (activeToken === "GRAM") {
                 balAmountText.innerText = `${userHolding.toFixed(3)} GRAM`;
             } else {
-                balAmountText.innerText = `${userHolding.toLocaleString()} POP`;
+                balAmountText.innerText = `${userHolding.toFixed(2)} POP`;
             }
 
             if (activeToken === "POP") {
@@ -870,7 +849,6 @@
                 totalLabel.innerText = `${currentTotalUsdt.toFixed(2)} USDT`;
 
             } else {
-                // GRAM
                 requiredAmount = 2.0;
 
                 priceLabel.innerText = `1 GRAM`;
@@ -878,7 +856,6 @@
                 totalLabel.innerText = `2.0 GRAM`;
             }
 
-            // Real-Time Fund Validation
             if (userHolding < requiredAmount) {
                 hasEnoughBalance = false;
                 warningBox.style.display = "flex";
