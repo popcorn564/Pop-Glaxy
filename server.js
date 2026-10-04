@@ -115,4 +115,4 @@ Click the button below to launch the station:
   });
 });
 
-console.log("POP Galaxy Telegram Bot engine active.");
+console.log("POP Galaxy Telegram Bot engine active."); 
