@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pop Galaxy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Official TON Connect UI SDK -->
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         :root {
             --bg-black: #000000;
@@ -141,6 +143,7 @@
             border: none;
             cursor: pointer;
             box-shadow: 0 4px 18px rgba(0, 136, 204, 0.4);
+            text-align: center;
         }
 
         .btn-outline {
@@ -153,6 +156,7 @@
             font-weight: 600;
             border: 1px solid var(--border-dark);
             cursor: pointer;
+            text-align: center;
         }
 
         /* Live Overview Cards */
@@ -508,7 +512,7 @@
             </p>
 
             <div class="hero-btns">
-                <button class="btn-blue" onclick="simulateWalletConnect()">Connect Wallet</button>
+                <button class="btn-blue" onclick="connectTonWallet()">Connect Wallet</button>
                 <button class="btn-outline" onclick="scrollToProgram()">See how it works</button>
             </div>
 
@@ -556,8 +560,8 @@
                     <div class="feat-item">Developer Fee: 0.6 - 1.0 GRAM</div>
                 </div>
                 <div class="pc-actions">
-                    <button class="btn-explore" onclick="simulateWalletConnect()">Explore Nova</button>
-                    <button class="btn-levels" onclick="simulateWalletConnect()">See levels</button>
+                    <button class="btn-explore" onclick="connectTonWallet()">Explore Nova</button>
+                    <button class="btn-levels" onclick="connectTonWallet()">See levels</button>
                 </div>
             </div>
         </div>
@@ -572,9 +576,9 @@
             <div class="change-inviter" onclick="promptChangeInviter()">Change inviter</div>
 
             <div class="wallet-connected-info">
-                Connected wallet: <span id="wallet-short">UQDE5S...feZQ</span>
+                Connected wallet: <span id="wallet-short">...</span>
             </div>
-            <button class="btn-disconnect" onclick="disconnectWallet()">Disconnect</button>
+            <button class="btn-disconnect" onclick="disconnectTonWallet()">Disconnect</button>
         </div>
     </div>
 
@@ -621,7 +625,35 @@
     </div>
 
     <script>
-        // Check Referrer on Load
+        // Initialize Official TON Connect UI
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
+        });
+
+        // Listen for wallet connection status changes
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                const rawAddress = wallet.account.address;
+                const shortAddr = rawAddress.slice(0, 6) + "..." + rawAddress.slice(-4);
+                document.getElementById("wallet-short").innerText = shortAddr;
+                document.getElementById("landing-view").style.display = "none";
+                document.getElementById("step-view").style.display = "flex";
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                document.getElementById("step-view").style.display = "none";
+                document.getElementById("landing-view").style.display = "block";
+            }
+        });
+
+        function connectTonWallet() {
+            tonConnectUI.openModal(); // হুবহু স্ক্রিনশটের মতো Telegram / Tonkeeper মডাল ওপেন হবে
+        }
+
+        function disconnectTonWallet() {
+            tonConnectUI.disconnect();
+        }
+
+        // Referrer Handling
         let inviter = "Direct (Admin)";
         const urlParams = new URLSearchParams(window.location.search);
         const refParam = urlParams.get('ref') || urlParams.get('tgWebAppStartParam');
@@ -631,19 +663,8 @@
         document.getElementById("inviter-text").innerText = "You were invited by " + inviter;
 
         let activeToken = "POP";
-        let baseJoinPrice = 1; // Level 1 Join Price: 1 GRAM
-        let devFee = 0.6;      // POP Fee: 0.6 GRAM
-
-        function simulateWalletConnect() {
-            document.getElementById("landing-view").style.display = "none";
-            document.getElementById("step-view").style.display = "flex";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function disconnectWallet() {
-            document.getElementById("step-view").style.display = "none";
-            document.getElementById("landing-view").style.display = "block";
-        }
+        let baseJoinPrice = 1; // 1 GRAM
+        let devFee = 0.6;      // 0.6 GRAM for POP
 
         function scrollToProgram() {
             document.getElementById("program-nova").scrollIntoView({ behavior: 'smooth' });
@@ -688,4 +709,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
