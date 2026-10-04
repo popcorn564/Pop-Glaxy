@@ -349,6 +349,7 @@
             cursor: pointer;
         }
 
+        /* Bottom Sheet */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -374,7 +375,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
 
         .sheet-title {
@@ -394,7 +395,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         .t-tab {
@@ -416,6 +417,21 @@
             background: #0088CC;
             border-color: #0088CC;
             color: #fff;
+        }
+
+        /* ForTon-style Warning Pill */
+        .balance-warning-pill {
+            background: rgba(234, 157, 55, 0.12);
+            border: 1px solid rgba(234, 157, 55, 0.35);
+            color: #ea9d37;
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
         }
 
         .invoice-table {
@@ -466,6 +482,14 @@
             font-size: 15px;
             font-weight: 700;
             border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-confirm-action.disabled-btn {
+            background: #171A21;
+            color: var(--text-gray);
+            border: 1px solid var(--border-dark);
             cursor: pointer;
         }
     </style>
@@ -583,6 +607,11 @@
                 <div class="t-tab" data-cur="USDT">₮ USDT</div>
             </div>
 
+            <!-- Warning Notification (ForTon style) -->
+            <div class="balance-warning-pill" id="balance-warning">
+                <span>✓</span> <span id="warning-text">Don't have enough POP</span>
+            </div>
+
             <div class="invoice-table">
                 <div class="inv-item">
                     <span>Network</span>
@@ -603,7 +632,7 @@
                 <span class="value" id="invoice-total">--</span>
             </div>
 
-            <button class="btn-confirm-action" id="btn-pay" onclick="sendTransactionToWallet()">Confirm Transaction</button>
+            <button class="btn-confirm-action" id="btn-pay" onclick="handlePayAction()">Confirm Transaction</button>
         </div>
     </div>
 
@@ -616,6 +645,13 @@
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
         });
 
+        // User Balances Cache
+        let userBalances = {
+            GRAM: 0,
+            POP: 0,
+            USDT: 0
+        };
+
         tonConnectUI.onStatusChange(wallet => {
             if (wallet) {
                 const rawAddress = wallet.account.address;
@@ -624,6 +660,7 @@
                 document.getElementById("landing-view").style.display = "none";
                 document.getElementById("step-view").style.display = "flex";
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                fetchUserWalletBalances(rawAddress);
             } else {
                 document.getElementById("step-view").style.display = "none";
                 document.getElementById("landing-view").style.display = "block";
@@ -636,6 +673,21 @@
 
         function disconnectTonWallet() {
             tonConnectUI.disconnect();
+        }
+
+        // Live Balance Fetcher from TON
+        async function fetchUserWalletBalances(rawAddr) {
+            try {
+                const res = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${rawAddr}`);
+                const data = await res.json();
+                if (data.ok && data.result) {
+                    // Native GRAM/TON balance
+                    userBalances.GRAM = parseFloat(data.result.balance) / 1e9;
+                }
+            } catch (e) {
+                console.log("Balance fetch fallback");
+            }
+            updateInvoice();
         }
 
         let inviter = "Direct (Admin)";
@@ -690,13 +742,21 @@
 
         let currentTotalPop = 2736;
         let currentTotalUsdt = 3.04;
+        let hasEnoughBalance = false;
 
         function updateInvoice() {
             const priceLabel = document.getElementById("invoice-slot-price");
             const feeLabel = document.getElementById("invoice-fee");
             const totalLabel = document.getElementById("invoice-total");
+            const warningBox = document.getElementById("balance-warning");
+            const warningText = document.getElementById("warning-text");
+            const payBtn = document.getElementById("btn-pay");
 
             if (!priceLabel || !feeLabel || !totalLabel) return;
+
+            let requiredAmount = 0;
+            let userHolding = 0;
+            let tokenName = activeToken;
 
             if (activeToken === "POP") {
                 const slotUsdt = 1.0 * liveGramUsdt;
@@ -706,6 +766,8 @@
                 const feePop = Math.round(feeUsdt / POP_PRICE_USD);
 
                 currentTotalPop = slotPop + feePop;
+                requiredAmount = currentTotalPop;
+                userHolding = userBalances.POP;
 
                 priceLabel.innerText = `${slotPop.toLocaleString()} POP`;
                 feeLabel.innerText = `${feePop.toLocaleString()} POP`;
@@ -715,15 +777,35 @@
                 const slotUsdt = 1.0 * liveGramUsdt;
                 const feeUsdt = 1.0 * liveGramUsdt;
                 currentTotalUsdt = slotUsdt + feeUsdt;
+                requiredAmount = currentTotalUsdt;
+                userHolding = userBalances.USDT;
 
                 priceLabel.innerText = `${slotUsdt.toFixed(2)} USDT`;
                 feeLabel.innerText = `${feeUsdt.toFixed(2)} USDT`;
                 totalLabel.innerText = `${currentTotalUsdt.toFixed(2)} USDT`;
 
             } else {
+                // GRAM
+                requiredAmount = 2.0;
+                userHolding = userBalances.GRAM;
+
                 priceLabel.innerText = `1 GRAM`;
                 feeLabel.innerText = `1.0 GRAM`;
                 totalLabel.innerText = `2.0 GRAM`;
+            }
+
+            // ForTon Validation Logic
+            if (userHolding < requiredAmount) {
+                hasEnoughBalance = false;
+                warningBox.style.display = "flex";
+                warningText.innerText = `Don't have enough ${tokenName}`;
+                payBtn.innerText = `Add ${tokenName} to your wallet`;
+                payBtn.classList.add("disabled-btn");
+            } else {
+                hasEnoughBalance = true;
+                warningBox.style.display = "none";
+                payBtn.innerText = "Confirm Transaction";
+                payBtn.classList.remove("disabled-btn");
             }
         }
 
@@ -736,40 +818,34 @@
             });
         });
 
-        // 100% Reliable Wallet Dispatcher
-        async function sendTransactionToWallet() {
-            const payBtn = document.getElementById("btn-pay");
-            if (!tonConnectUI.connected) {
+        // Pay action or Add Token
+        async function handlePayAction() {
+            if (!hasEnoughBalance) {
+                // ForTon behavior: Open wallet to deposit / buy token
                 tonConnectUI.openModal();
                 return;
             }
 
+            const payBtn = document.getElementById("btn-pay");
             try {
                 payBtn.innerText = "Please confirm in wallet...";
                 payBtn.disabled = true;
 
                 let txMessages = [];
-
-                if (activeToken === "POP") {
-                    // POP Token Contract Transaction
-                    // সরাসরি POP মাস্টার কন্ট্রাক্টকে টার্গেট করবে (যার ফলে ওয়ালেট POP ব্যালেন্স ভ্যালিডেট করে)
-                    txMessages.push({
-                        address: POP_MASTER_ADDRESS,
-                        amount: "50000000" // 0.05 TON নেটওয়ার্ক ট্রানজ্যাকশন ফি
-                    });
-
-                } else if (activeToken === "USDT") {
-                    // USDT Token Contract Transaction
-                    txMessages.push({
-                        address: USDT_MASTER_ADDRESS,
-                        amount: "50000000" // 0.05 TON নেটওয়ার্ক ফি
-                    });
-
-                } else {
-                    // GRAM Transaction: 2.0 GRAM (2,000,000,000 nanoGRAM)
+                if (activeToken === "GRAM") {
                     txMessages.push({
                         address: ADMIN_ADDRESS,
-                        amount: "2000000000"
+                        amount: "2000000000" // 2.0 GRAM
+                    });
+                } else if (activeToken === "POP") {
+                    txMessages.push({
+                        address: POP_MASTER_ADDRESS,
+                        amount: "50000000"
+                    });
+                } else if (activeToken === "USDT") {
+                    txMessages.push({
+                        address: USDT_MASTER_ADDRESS,
+                        amount: "50000000"
                     });
                 }
 
@@ -778,23 +854,20 @@
                     messages: txMessages
                 };
 
-                // এখন কোনো ক্র্যাশ ছাড়া সরাসরি টেলিগ্রাম ওয়ালেট ওপেন হবে
                 const result = await tonConnectUI.sendTransaction(transaction);
-                
                 if (result) {
                     payBtn.innerText = "Activation Successful!";
                     setTimeout(() => {
                         closeBottomSheet();
-                        payBtn.innerText = "Confirm Transaction";
-                        payBtn.disabled = false;
+                        updateInvoice();
                     }, 1500);
                 }
             } catch (err) {
-                payBtn.innerText = "Confirm Transaction";
                 payBtn.disabled = false;
+                updateInvoice();
                 console.error("Wallet error:", err);
             }
         }
     </script>
 </body>
-                    </html>
+    </html>
