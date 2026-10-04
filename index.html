@@ -389,7 +389,6 @@
             font-weight: 800;
         }
 
-        /* Shundor Header Balance Badge */
         .wallet-bal-badge {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -400,7 +399,7 @@
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
 
         .sheet-close {
@@ -618,7 +617,7 @@
             <div class="sheet-header">
                 <div class="sheet-header-left">
                     <div class="sheet-title">Transaction Preview</div>
-                    <!-- Updated Shundor Balance Icon -->
+                    <!-- Live Selected Token Balance Badge -->
                     <div class="wallet-bal-badge" id="header-wallet-bal">
                         <span>💳</span> <span id="bal-amount-text">0.00</span>
                     </div>
@@ -662,7 +661,6 @@
     </div>
 
     <script>
-        // Admin / Dev Wallet Receiver
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
         const POP_MASTER_ADDRESS = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
         const USDT_MASTER_ADDRESS = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
@@ -701,18 +699,40 @@
             tonConnectUI.disconnect();
         }
 
-        // Live Jetton Balances Fetcher
+        // Multi-API Direct Balance Resolver (Toncenter v3 + TonAPI)
         async function fetchUserWalletBalances(rawAddr) {
             try {
-                const res = await fetch(`https://tonapi.io/v2/accounts/${rawAddr}/jettons`);
+                // Method 1: Toncenter v3 Jetton Wallets endpoint
+                const res = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${rawAddr}`);
                 const data = await res.json();
-                if (data && data.balances) {
-                    data.balances.forEach(item => {
+                if (data && data.jetton_wallets) {
+                    data.jetton_wallets.forEach(item => {
+                        const master = item.jetton;
+                        const bal = parseFloat(item.balance);
+                        if (master === USDT_MASTER_ADDRESS) {
+                            userBalances.USDT = bal / 1e6; // USDT 6 decimals
+                        } else if (master === GRAM_MASTER_ADDRESS) {
+                            userBalances.GRAM = bal / 1e9; // GRAM 9 decimals
+                        } else if (master === POP_MASTER_ADDRESS) {
+                            userBalances.POP = bal / 1e9;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log("Toncenter v3 Jetton check fallback");
+            }
+
+            // Method 2: TonAPI backup fetcher
+            try {
+                const res2 = await fetch(`https://tonapi.io/v2/accounts/${rawAddr}/jettons`);
+                const data2 = await res2.json();
+                if (data2 && data2.balances) {
+                    data2.balances.forEach(item => {
                         const master = item.jetton.address;
                         const decimals = item.jetton.decimals || 9;
                         const bal = parseFloat(item.balance) / Math.pow(10, decimals);
                         
-                        if (master === USDT_MASTER_ADDRESS) {
+                        if (master.toLowerCase().includes("eqcxe6mutqjkfngfarotkot1lzbdiix1kcixrv7nw2id_sds") || master === USDT_MASTER_ADDRESS) {
                             userBalances.USDT = bal;
                         } else if (master === GRAM_MASTER_ADDRESS) {
                             userBalances.GRAM = bal;
@@ -721,9 +741,10 @@
                         }
                     });
                 }
-            } catch (e) {
-                console.log("TonAPI balance fallback");
+            } catch (err) {
+                console.log("TonAPI fallback skipped");
             }
+
             updateInvoice();
         }
 
@@ -799,7 +820,7 @@
             let userHolding = userBalances[activeToken] || 0;
             let tokenName = activeToken;
 
-            // Header Balance Badge Update
+            // Header Balance Badge Update (Live from wallet)
             if (activeToken === "USDT") {
                 balAmountText.innerText = `${userHolding.toFixed(2)} USDT`;
             } else if (activeToken === "GRAM") {
@@ -841,7 +862,7 @@
                 totalLabel.innerText = `2.0 GRAM`;
             }
 
-            // Real-Time Fund Validation Logic
+            // Real-Time Fund Validation
             if (userHolding < requiredAmount) {
                 hasEnoughBalance = false;
                 warningBox.style.display = "flex";
@@ -880,13 +901,11 @@
                 let txMessages = [];
 
                 if (activeToken === "POP") {
-                    // POP diye kinle shompurno POP amount Dev Wallet-e joma hobe
                     txMessages.push({
                         address: ADMIN_ADDRESS,
                         amount: "50000000" // Execution gas fee (0.05 TON)
                     });
                 } else if (activeToken === "GRAM") {
-                    // 1.0 GRAM dev fee + 1.0 GRAM matrix slot distribution
                     txMessages.push({
                         address: ADMIN_ADDRESS,
                         amount: "1000000000" // 1.0 GRAM Developer Fee
@@ -896,7 +915,6 @@
                         amount: "1000000000" // 1.0 GRAM Slot Partner Distribution
                     });
                 } else if (activeToken === "USDT") {
-                    // USDT fee dev wallet-e ebong slot price matrix pool-e
                     txMessages.push({
                         address: ADMIN_ADDRESS,
                         amount: "50000000"
@@ -926,4 +944,4 @@
         }
     </script>
 </body>
-                </html>
+</html>
