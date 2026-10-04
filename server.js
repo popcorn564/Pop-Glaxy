@@ -1,6 +1,10 @@
-const express = require('express');
-const path = require('path');
-const TelegramBot = require('node-telegram-bot-api');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import TelegramBot from 'node-telegram-bot-api';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
