@@ -617,9 +617,8 @@
             <div class="sheet-header">
                 <div class="sheet-header-left">
                     <div class="sheet-title">Transaction Preview</div>
-                    <!-- Live Selected Token Balance Badge -->
                     <div class="wallet-bal-badge" id="header-wallet-bal">
-                        <span>💳</span> <span id="bal-amount-text">...</span>
+                        <span>💳</span> <span id="bal-amount-text">Loading...</span>
                     </div>
                 </div>
                 <button class="sheet-close" onclick="closeBottomSheet()">&times;</button>
@@ -631,7 +630,6 @@
                 <div class="t-tab" data-cur="USDT">₮ USDT</div>
             </div>
 
-            <!-- Warning Pill -->
             <div class="balance-warning-pill" id="balance-warning">
                 <span>✓</span> <span id="warning-text">Don't have enough POP</span>
             </div>
@@ -662,18 +660,18 @@
 
     <script>
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
-        const POP_MASTER_ADDRESS = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
-        const USDT_MASTER_ADDRESS = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
-        const GRAM_MASTER_ADDRESS = "EQC47093oX5Xhb0xuk2lCr2HSfrKTngMdgQ1cxMNyOtHzPW5";
+        const POP_MASTER = "EQBJR76LKeOC4MA113ORjgj5E3G-H8e5LT7HO6Vu-YMU2tYb";
+        const USDT_MASTER = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
+        const GRAM_MASTER = "EQC47093oX5Xhb0xuk2lCr2HSfrKTngMdgQ1cxMNyOtHzPW5";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
         });
 
-        // Default Cache Balances (Tonkeeper active holdings)
+        // Dynamic Balances for whatever wallet is connected (starts at 0)
         let userBalances = {
-            USDT: 1.48,
-            GRAM: 0.502,
+            USDT: 0.0,
+            GRAM: 0.0,
             POP: 0.0
         };
 
@@ -685,8 +683,11 @@
                 document.getElementById("landing-view").style.display = "none";
                 document.getElementById("step-view").style.display = "flex";
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                fetchUserWalletBalances(rawAddress);
+                
+                // Fetch dynamic balance for this exact wallet
+                fetchDynamicWalletBalances(rawAddress);
             } else {
+                userBalances = { USDT: 0.0, GRAM: 0.0, POP: 0.0 };
                 document.getElementById("step-view").style.display = "none";
                 document.getElementById("landing-view").style.display = "block";
             }
@@ -700,51 +701,41 @@
             tonConnectUI.disconnect();
         }
 
-        // 100% Reliable Multi-gateway Balance Resolver
-        async function fetchUserWalletBalances(rawAddr) {
-            try {
-                // Method 1: Toncenter v3 Jetton Wallets endpoint
-                const res = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${rawAddr}`);
-                const data = await res.json();
-                if (data && data.jetton_wallets && data.jetton_wallets.length > 0) {
-                    data.jetton_wallets.forEach(item => {
-                        const master = item.jetton;
-                        const bal = parseFloat(item.balance);
-                        if (master === USDT_MASTER_ADDRESS) {
-                            userBalances.USDT = bal / 1e6;
-                        } else if (master === GRAM_MASTER_ADDRESS) {
-                            userBalances.GRAM = bal / 1e9;
-                        } else if (master === POP_MASTER_ADDRESS) {
-                            userBalances.POP = bal / 1e9;
-                        }
-                    });
-                }
-            } catch (e) {
-                console.log("Toncenter v3 fetch bypassed");
-            }
+        // Live Dynamic Balance Fetcher
+        async function fetchDynamicWalletBalances(address) {
+            userBalances = { USDT: 0.0, GRAM: 0.0, POP: 0.0 };
 
-            // Method 2: Public Proxy CORS fallback
             try {
-                const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(`https://tonapi.io/v2/accounts/${rawAddr}/jettons`);
-                const res2 = await fetch(proxyUrl);
-                const data2 = await res2.json();
-                if (data2 && data2.balances) {
-                    data2.balances.forEach(item => {
-                        const master = item.jetton.address;
-                        const decimals = item.jetton.decimals || 9;
-                        const bal = parseFloat(item.balance) / Math.pow(10, decimals);
-                        if (master === USDT_MASTER_ADDRESS) {
-                            userBalances.USDT = bal;
-                        } else if (master === GRAM_MASTER_ADDRESS) {
-                            userBalances.GRAM = bal;
-                        } else if (master === POP_MASTER_ADDRESS) {
-                            userBalances.POP = bal;
+                // Toncenter API to get user's Jetton list
+                const res = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${encodeURIComponent(address)}&limit=100`);
+                const data = await res.json();
+                
+                if (data && data.jetton_wallets) {
+                    data.jetton_wallets.forEach(jw => {
+                        const jettonAddress = jw.jetton;
+                        const rawBal = parseFloat(jw.balance);
+
+                        if (jettonAddress === USDT_MASTER) {
+                            userBalances.USDT = rawBal / 1e6; // USDT (6 decimals)
+                        } else if (jettonAddress === GRAM_MASTER) {
+                            userBalances.GRAM = rawBal / 1e9; // GRAM (9 decimals)
+                        } else if (jettonAddress === POP_MASTER) {
+                            userBalances.POP = rawBal / 1e9;  // POP (9 decimals)
                         }
                     });
                 }
             } catch (err) {
-                console.log("Proxy fetch bypassed");
+                console.error("Balance fetch error:", err);
             }
+
+            // Fallback for native TON/GRAM if not in jetton list
+            try {
+                const resNative = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${encodeURIComponent(address)}`);
+                const dataNative = await resNative.json();
+                if (dataNative.ok && dataNative.result && userBalances.GRAM === 0) {
+                    userBalances.GRAM = parseFloat(dataNative.result.balance) / 1e9;
+                }
+            } catch (e) {}
 
             updateInvoice();
         }
@@ -792,7 +783,7 @@
 
         function openBottomSheet() {
             if (tonConnectUI.wallet) {
-                fetchUserWalletBalances(tonConnectUI.wallet.account.address);
+                fetchDynamicWalletBalances(tonConnectUI.wallet.account.address);
             }
             updateInvoice();
             document.getElementById("tx-sheet").style.display = "flex";
@@ -821,7 +812,7 @@
             let userHolding = userBalances[activeToken] || 0;
             let tokenName = activeToken;
 
-            // Live Selected Token Balance Badge
+            // Live Balance Badge Update (Reflects the actual connected wallet)
             if (activeToken === "USDT") {
                 balAmountText.innerText = `${userHolding.toFixed(2)} USDT`;
             } else if (activeToken === "GRAM") {
@@ -932,7 +923,7 @@
                     setTimeout(() => {
                         closeBottomSheet();
                         if (tonConnectUI.wallet) {
-                            fetchUserWalletBalances(tonConnectUI.wallet.account.address);
+                            fetchDynamicWalletBalances(tonConnectUI.wallet.account.address);
                         }
                     }, 1500);
                 }
