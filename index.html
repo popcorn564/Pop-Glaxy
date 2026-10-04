@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pop Galaxy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Official TON Connect UI SDK -->
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         :root {
@@ -53,7 +52,6 @@
             margin: 0 auto;
         }
 
-        /* Top Navbar */
         .nav-bar {
             display: flex;
             justify-content: space-between;
@@ -94,7 +92,6 @@
             border-radius: 2px;
         }
 
-        /* Hero Pill */
         .badge-pill {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -106,7 +103,6 @@
             margin-bottom: 20px;
         }
 
-        /* Hero Headings */
         .hero-head {
             font-size: 32px;
             font-weight: 800;
@@ -159,7 +155,6 @@
             text-align: center;
         }
 
-        /* Live Overview Cards */
         .overview-box {
             background: #0B0D11;
             border: 1px solid var(--border-dark);
@@ -210,7 +205,6 @@
             color: #2F80ED;
         }
 
-        /* Single Program: Nova */
         .program-card {
             background: linear-gradient(180deg, #5E35B1 0%, #4527A0 100%);
             border-radius: 24px;
@@ -289,7 +283,6 @@
             cursor: pointer;
         }
 
-        /* View State 2: One More Step / Join Screen */
         .step-container {
             display: none;
             flex-direction: column;
@@ -356,7 +349,7 @@
             cursor: pointer;
         }
 
-        /* Bottom Sheet: Transaction Preview */
+        /* Bottom Sheet */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -398,7 +391,6 @@
             cursor: pointer;
         }
 
-        /* Token Toggle Tabs */
         .token-tabs {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -484,7 +476,6 @@
     <div class="ambient-glow"></div>
 
     <div class="wrapper">
-        <!-- Top Nav -->
         <div class="nav-bar">
             <div class="logo-box">
                 <div class="logo-icon"></div>
@@ -497,7 +488,6 @@
             </div>
         </div>
 
-        <!-- 1. Landing View Mode -->
         <div id="landing-view">
             <div class="badge-pill">Pop Galaxy ecosystem · live on-chain products</div>
 
@@ -544,7 +534,6 @@
                 </div>
             </div>
 
-            <!-- Single Program: Nova -->
             <div class="program-card" id="program-nova">
                 <div class="pc-top">
                     <div class="pc-title">Nova</div>
@@ -566,7 +555,6 @@
             </div>
         </div>
 
-        <!-- 2. Step View (After Wallet Connection) -->
         <div id="step-view" class="step-container">
             <div class="step-logo"></div>
             <div class="step-heading">One more step</div>
@@ -582,7 +570,7 @@
         </div>
     </div>
 
-    <!-- 3. Transaction Preview Bottom Sheet -->
+    <!-- Bottom Sheet -->
     <div class="sheet-overlay" id="tx-sheet">
         <div class="sheet-content">
             <div class="sheet-header">
@@ -621,15 +609,12 @@
     </div>
 
     <script>
-        // Admin Receiver Address (Background only, user cannot see this)
         const ADMIN_ADDRESS = "UQDE5Sxi72raMvfqPOwaRrJTTr6XF9X8MWivo6JNuX-rfeZQ";
 
-        // Initialize Official TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://pop-glaxy-production.up.railway.app/tonconnect-manifest.json'
         });
 
-        // Listen for wallet connection status changes
         tonConnectUI.onStatusChange(wallet => {
             if (wallet) {
                 const rawAddress = wallet.account.address;
@@ -652,7 +637,6 @@
             tonConnectUI.disconnect();
         }
 
-        // Referrer Handling
         let inviter = "Direct (Admin)";
         const urlParams = new URLSearchParams(window.location.search);
         const refParam = urlParams.get('ref') || urlParams.get('tgWebAppStartParam');
@@ -708,29 +692,22 @@
             const totalLabel = document.getElementById("invoice-total");
 
             if (activeToken === "USDT") {
-                // 1.0 GRAM Slot + 1.0 GRAM Fee = 2.0 GRAM in USDT
-                const joinUsdt = 1.0 * liveGramUsdt;
-                const feeUsdt = 1.0 * liveGramUsdt;
-                const totalUsdt = joinUsdt + feeUsdt;
+                // 1 GRAM join + 1 GRAM fee = 2 GRAM total in USDT
+                const joinUsdt = liveGramUsdt;
+                const feeUsdt = liveGramUsdt;
+                const totalUsdt = (joinUsdt + feeUsdt).toFixed(2);
 
                 priceLabel.innerText = `${joinUsdt.toFixed(2)} USDT`;
                 feeLabel.innerText = `${feeUsdt.toFixed(2)} USDT`;
-                totalLabel.innerText = `${totalUsdt.toFixed(2)} USDT`;
+                totalLabel.innerText = `${totalUsdt} USDT`;
 
             } else if (activeToken === "POP") {
-                // 1.0 GRAM Slot -> USDT -> POP
-                const slotUsdt = 1.0 * liveGramUsdt;
-                const slotPop = Math.round(slotUsdt / POP_PRICE_USD);
+                // 1 GRAM in USDT divided by 0.001 USDT per POP
+                const popNeeded = Math.round(liveGramUsdt / POP_PRICE_USD);
 
-                // 0.8 GRAM Fee -> USDT -> POP
-                const feeUsdt = 0.8 * liveGramUsdt;
-                const feePop = Math.round(feeUsdt / POP_PRICE_USD);
-
-                const totalPop = slotPop + feePop;
-
-                priceLabel.innerText = `${slotPop.toLocaleString()} POP`;
-                feeLabel.innerText = `${feePop.toLocaleString()} POP`;
-                totalLabel.innerText = `${totalPop.toLocaleString()} POP`;
+                priceLabel.innerText = `${popNeeded.toLocaleString()} POP`;
+                feeLabel.innerText = `0.8 GRAM`;
+                totalLabel.innerText = `${popNeeded.toLocaleString()} POP + 0.8 GRAM`;
 
             } else {
                 // GRAM
@@ -749,7 +726,6 @@
             });
         });
 
-        // Real Ton Transaction Trigger
         async function sendTransactionToWallet() {
             const payBtn = document.getElementById("btn-pay");
             if (!tonConnectUI.connected) {
@@ -793,4 +769,4 @@
         }
     </script>
 </body>
-                    </html>
+</html>
